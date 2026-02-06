@@ -23,6 +23,8 @@
   let lastUnassignDisabled = null;
   let lastSelectKey = null;
   let lastListKey = null;
+  let lastUrlHref = null;
+  let urlWatchTimer = null;
 
   function safeId() {
     const path = window.location.pathname || "";
@@ -274,13 +276,17 @@
             list.innerHTML =
               "<div class='dsco-chat-empty'>No chats assigned.</div>";
           } else {
-            for (const id of chatIds) {
-              const label = chatTitles[id] || `Chat ${id.slice(0, 6)}`;
-              const item = document.createElement("div");
-              item.className = "dsco-chat-item";
-              item.textContent = label;
-              list.appendChild(item);
-            }
+          for (const id of chatIds) {
+            const label = chatTitles[id] || `Chat ${id.slice(0, 6)}`;
+            const item = document.createElement("a");
+            item.className = "dsco-chat-item";
+            item.href = `/a/chat/s/${id}`;
+            item.textContent = label;
+            item.addEventListener("click", () => {
+              window.dispatchEvent(new Event("dsco:urlchange"));
+            });
+            list.appendChild(item);
+          }
           }
           ui.list.appendChild(row);
         }
@@ -376,6 +382,18 @@
     window.addEventListener("dsco:urlchange", onUrlChange);
   }
 
+  function startUrlWatcher() {
+    if (urlWatchTimer) return;
+    lastUrlHref = window.location.href;
+    urlWatchTimer = setInterval(() => {
+      const current = window.location.href;
+      if (current !== lastUrlHref) {
+        lastUrlHref = current;
+        onUrlChange();
+      }
+    }, 500);
+  }
+
   function queueRender() {
     if (renderQueued) return;
     renderQueued = true;
@@ -418,6 +436,7 @@
     render();
     hookHistory();
     startSidebarObserver();
+    startUrlWatcher();
   }
 
   init();
