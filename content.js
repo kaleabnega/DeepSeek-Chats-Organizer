@@ -276,17 +276,36 @@
             list.innerHTML =
               "<div class='dsco-chat-empty'>No chats assigned.</div>";
           } else {
-          for (const id of chatIds) {
-            const label = chatTitles[id] || `Chat ${id.slice(0, 6)}`;
-            const item = document.createElement("a");
-            item.className = "dsco-chat-item";
-            item.href = `/a/chat/s/${id}`;
-            item.textContent = label;
-            item.addEventListener("click", () => {
-              window.dispatchEvent(new Event("dsco:urlchange"));
-            });
-            list.appendChild(item);
-          }
+            for (const id of chatIds) {
+              const label = chatTitles[id] || `Chat ${id.slice(0, 6)}`;
+              const item = document.createElement("div");
+              item.className = "dsco-chat-item";
+
+              const link = document.createElement("a");
+              link.className = "dsco-chat-link";
+              link.href = `/a/chat/s/${id}`;
+              link.textContent = label;
+              link.addEventListener("click", () => {
+                window.dispatchEvent(new Event("dsco:urlchange"));
+              });
+
+              const del = document.createElement("button");
+              del.className = "dsco-chat-remove";
+              del.type = "button";
+              del.textContent = "×";
+              del.setAttribute("aria-label", "Remove chat from project");
+              del.addEventListener("click", async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                delete state.chatToProject[id];
+                await saveState();
+                render();
+              });
+
+              item.appendChild(link);
+              item.appendChild(del);
+              list.appendChild(item);
+            }
           }
           ui.list.appendChild(row);
         }

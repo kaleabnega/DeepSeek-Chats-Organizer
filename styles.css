@@ -121,15 +121,43 @@
 }
 
 .dsco-chat-item {
-  font-size: 12px;
-  color: #cbd5f5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: #0f172a;
   border: 1px solid #1e293b;
   border-radius: 8px;
-  padding: 4px 8px;
+  padding: 4px 6px 4px 8px;
+}
+
+.dsco-chat-link {
+  flex: 1;
+  font-size: 12px;
+  color: #cbd5f5;
+  text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.dsco-chat-link:hover {
+  text-decoration: underline;
+}
+
+.dsco-chat-remove {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.dsco-chat-remove:hover {
+  background: rgb(212, 72, 72);
+  color: #e2e8f0;
 }
 
 .dsco-chat-empty {
