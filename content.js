@@ -16,6 +16,8 @@
   };
 
   let sidebarObserver = null;
+  let sidebarRoot = null;
+  let renderQueued = false;
 
   function safeId() {
     const path = window.location.pathname || "";
@@ -36,7 +38,10 @@
         const saved = result[STORAGE_KEY];
         if (saved && typeof saved === "object") {
           state.projects = Array.isArray(saved.projects) ? saved.projects : [];
-          state.chatToProject = saved.chatToProject && typeof saved.chatToProject === "object" ? saved.chatToProject : {};
+          state.chatToProject =
+            saved.chatToProject && typeof saved.chatToProject === "object"
+              ? saved.chatToProject
+              : {};
         }
         resolve();
       });
@@ -45,12 +50,15 @@
 
   function saveState() {
     return new Promise((resolve) => {
-      chrome.storage.local.set({
-        [STORAGE_KEY]: {
-          projects: state.projects,
-          chatToProject: state.chatToProject,
+      chrome.storage.local.set(
+        {
+          [STORAGE_KEY]: {
+            projects: state.projects,
+            chatToProject: state.chatToProject,
+          },
         },
-      }, resolve);
+        resolve,
+      );
     });
   }
 
@@ -63,7 +71,7 @@
     if (!rawUrl) return null;
     try {
       const url = new URL(rawUrl, window.location.origin);
-      const match = url.pathname.match(/\/(?:chat|c)\/([^/?#]+)/);
+      const match = url.pathname.match(/\/(?:a\/chat\/s|chat|c)\/([^/?#]+)/);
       return match ? match[1] : null;
     } catch {
       return null;
@@ -71,20 +79,51 @@
   }
 
   function findSidebarContainer() {
-    const candidates = document.querySelectorAll("aside, nav, [role='navigation']");
-    for (const el of candidates) {
-      if (el.querySelector("a[href*='/chat/'], a[href*='/c/']")) return el;
+    const explicit = document.querySelector(
+      "#root > div > div > div.c3ecdb44 > div.dc04ec1d > div.b8812f16",
+    );
+    if (explicit) return explicit;
+
+    const linkSelector =
+      "a[href*='/a/chat/s/'], a[href*='/chat/'], a[href*='/c/']";
+    const anchors = document.querySelectorAll(linkSelector);
+    if (anchors.length === 0) return null;
+
+    let node = anchors[0];
+    while (node && node !== document.body) {
+      if (node.matches && node.matches("aside, nav, [role='navigation']"))
+        return node;
+      if (node.classList && node.classList.toString().includes("scroll"))
+        return node;
+      node = node.parentElement;
     }
-    return null;
+
+    return anchors[0].parentElement;
+  }
+
+  function findNewChatButtonContainer() {
+    return document.querySelector("div._5a8ac7a");
   }
 
   function attachUIToSidebar() {
     if (!ui.root) return false;
     const sidebar = findSidebarContainer();
     if (!sidebar) return false;
+    const newChat = findNewChatButtonContainer();
+    if (newChat && newChat.parentElement) {
+      if (ui.root.parentElement !== newChat.parentElement) {
+        newChat.parentElement.insertBefore(ui.root, newChat.nextSibling);
+      } else if (newChat.nextSibling !== ui.root) {
+        newChat.parentElement.insertBefore(ui.root, newChat.nextSibling);
+      }
+      sidebarRoot = sidebar;
+      return true;
+    }
+
     if (ui.root.parentElement !== sidebar) {
       sidebar.appendChild(ui.root);
     }
+    sidebarRoot = sidebar;
     return true;
   }
 
@@ -145,14 +184,19 @@
 
   function getChatTitlesFromSidebar() {
     const map = {};
-    const sidebar = findSidebarContainer();
+    const sidebar = sidebarRoot || findSidebarContainer();
     if (!sidebar) return map;
 
     const links = sidebar.querySelectorAll("a[href]");
     for (const link of links) {
       const chatId = parseChatIdFromUrl(link.getAttribute("href"));
       if (!chatId) continue;
-      const title = (link.textContent || link.getAttribute("title") || link.getAttribute("aria-label") || "").trim();
+      const title = (
+        link.textContent ||
+        link.getAttribute("title") ||
+        link.getAttribute("aria-label") ||
+        ""
+      ).trim();
       if (title) map[chatId] = title;
     }
     return map;
@@ -209,7 +253,8 @@
         `;
         const list = row.querySelector(".dsco-project-chats");
         if (chatIds.length === 0) {
-          list.innerHTML = "<div class='dsco-chat-empty'>No chats assigned.</div>";
+          list.innerHTML =
+            "<div class='dsco-chat-empty'>No chats assigned.</div>";
         } else {
           for (const id of chatIds) {
             const label = chatTitles[id] || `Chat ${id.slice(0, 6)}`;
@@ -229,7 +274,9 @@
       ui.unassignBtn.disabled = true;
     } else if (assigned) {
       const project = state.projects.find((p) => p.id === assigned);
-      ui.status.textContent = project ? `Assigned to: ${project.name}` : "Assigned to a missing project.";
+      ui.status.textContent = project
+        ? `Assigned to: ${project.name}`
+        : "Assigned to a missing project.";
       ui.assignBtn.disabled = false;
       ui.unassignBtn.disabled = false;
     } else {
@@ -290,16 +337,41 @@
       return result;
     };
 
-    window.addEventListener("popstate", () => window.dispatchEvent(new Event("dsco:urlchange")));
+    window.addEventListener("popstate", () =>
+      window.dispatchEvent(new Event("dsco:urlchange")),
+    );
     window.addEventListener("dsco:urlchange", onUrlChange);
+  }
+
+  function queueRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      render();
+    });
   }
 
   function startSidebarObserver() {
     if (sidebarObserver) return;
-    sidebarObserver = new MutationObserver(() => {
-      if (attachUIToSidebar()) render();
-    });
-    sidebarObserver.observe(document.body, { childList: true, subtree: true });
+
+    const onMutations = () => {
+      const attached = attachUIToSidebar();
+      if (attached) queueRender();
+    };
+
+    sidebarObserver = new MutationObserver(onMutations);
+
+    const sidebar = findSidebarContainer();
+    if (sidebar) {
+      sidebarRoot = sidebar;
+      sidebarObserver.observe(sidebar, { childList: true, subtree: true });
+    } else {
+      sidebarObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
   }
 
   async function init() {
