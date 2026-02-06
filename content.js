@@ -18,6 +18,11 @@
   let sidebarObserver = null;
   let sidebarRoot = null;
   let renderQueued = false;
+  let lastStatusText = null;
+  let lastAssignDisabled = null;
+  let lastUnassignDisabled = null;
+  let lastSelectKey = null;
+  let lastListKey = null;
 
   function safeId() {
     const path = window.location.pathname || "";
@@ -222,67 +227,95 @@
     const chatTitles = getChatTitlesFromSidebar();
     const chatsByProject = buildChatsByProject();
 
-    ui.select.innerHTML = "";
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "Select project";
-    ui.select.appendChild(placeholder);
+    const selectKey = JSON.stringify({
+      projects: state.projects,
+      assigned,
+    });
+    if (selectKey !== lastSelectKey) {
+      ui.select.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Select project";
+      ui.select.appendChild(placeholder);
 
-    for (const p of state.projects) {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = p.name;
-      if (p.id === assigned) opt.selected = true;
-      ui.select.appendChild(opt);
-    }
-
-    ui.list.innerHTML = "";
-    if (state.projects.length === 0) {
-      ui.list.innerHTML = "<div class='dsco-empty'>No projects yet.</div>";
-    } else {
       for (const p of state.projects) {
-        const chatIds = chatsByProject[p.id] || [];
-        const row = document.createElement("div");
-        row.className = "dsco-project";
-        row.innerHTML = `
-          <div class="dsco-project-header">
-            <div class="dsco-project-name">${escapeHtml(p.name)}</div>
-            <div class="dsco-project-count">${chatIds.length}</div>
-          </div>
-          <div class="dsco-project-chats"></div>
-        `;
-        const list = row.querySelector(".dsco-project-chats");
-        if (chatIds.length === 0) {
-          list.innerHTML =
-            "<div class='dsco-chat-empty'>No chats assigned.</div>";
-        } else {
-          for (const id of chatIds) {
-            const label = chatTitles[id] || `Chat ${id.slice(0, 6)}`;
-            const item = document.createElement("div");
-            item.className = "dsco-chat-item";
-            item.textContent = label;
-            list.appendChild(item);
-          }
-        }
-        ui.list.appendChild(row);
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (p.id === assigned) opt.selected = true;
+        ui.select.appendChild(opt);
       }
+      lastSelectKey = selectKey;
     }
+
+    const listKey = JSON.stringify({
+      projects: state.projects,
+      chatsByProject,
+      chatTitles,
+    });
+    if (listKey !== lastListKey) {
+      ui.list.innerHTML = "";
+      if (state.projects.length === 0) {
+        ui.list.innerHTML = "<div class='dsco-empty'>No projects yet.</div>";
+      } else {
+        for (const p of state.projects) {
+          const chatIds = chatsByProject[p.id] || [];
+          const row = document.createElement("div");
+          row.className = "dsco-project";
+          row.innerHTML = `
+            <div class="dsco-project-header">
+              <div class="dsco-project-name">${escapeHtml(p.name)}</div>
+              <div class="dsco-project-count">${chatIds.length}</div>
+            </div>
+            <div class="dsco-project-chats"></div>
+          `;
+          const list = row.querySelector(".dsco-project-chats");
+          if (chatIds.length === 0) {
+            list.innerHTML =
+              "<div class='dsco-chat-empty'>No chats assigned.</div>";
+          } else {
+            for (const id of chatIds) {
+              const label = chatTitles[id] || `Chat ${id.slice(0, 6)}`;
+              const item = document.createElement("div");
+              item.className = "dsco-chat-item";
+              item.textContent = label;
+              list.appendChild(item);
+            }
+          }
+          ui.list.appendChild(row);
+        }
+      }
+      lastListKey = listKey;
+    }
+
+    let statusText = "Not assigned.";
+    let assignDisabled = false;
+    let unassignDisabled = true;
 
     if (!chatId) {
-      ui.status.textContent = "Open a chat to assign it.";
-      ui.assignBtn.disabled = true;
-      ui.unassignBtn.disabled = true;
+      statusText = "Open a chat to assign it.";
+      assignDisabled = true;
+      unassignDisabled = true;
     } else if (assigned) {
       const project = state.projects.find((p) => p.id === assigned);
-      ui.status.textContent = project
+      statusText = project
         ? `Assigned to: ${project.name}`
         : "Assigned to a missing project.";
-      ui.assignBtn.disabled = false;
-      ui.unassignBtn.disabled = false;
-    } else {
-      ui.status.textContent = "Not assigned.";
-      ui.assignBtn.disabled = false;
-      ui.unassignBtn.disabled = true;
+      assignDisabled = false;
+      unassignDisabled = false;
+    }
+
+    if (statusText !== lastStatusText) {
+      ui.status.textContent = statusText;
+      lastStatusText = statusText;
+    }
+    if (assignDisabled !== lastAssignDisabled) {
+      ui.assignBtn.disabled = assignDisabled;
+      lastAssignDisabled = assignDisabled;
+    }
+    if (unassignDisabled !== lastUnassignDisabled) {
+      ui.unassignBtn.disabled = unassignDisabled;
+      lastUnassignDisabled = unassignDisabled;
     }
   }
 
@@ -355,7 +388,12 @@
   function startSidebarObserver() {
     if (sidebarObserver) return;
 
-    const onMutations = () => {
+    const onMutations = (mutations) => {
+      for (const m of mutations) {
+        if (ui.root && ui.root.contains(m.target)) {
+          return;
+        }
+      }
       const attached = attachUIToSidebar();
       if (attached) queueRender();
     };
