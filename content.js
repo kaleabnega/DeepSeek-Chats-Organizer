@@ -15,6 +15,8 @@
     unassignBtn: null,
   };
 
+  let sidebarObserver = null;
+
   function safeId() {
     const path = window.location.pathname || "";
     const parts = path.split("/").filter(Boolean);
@@ -53,8 +55,37 @@
   }
 
   function createProject(name) {
-    const id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = `project_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     state.projects.push({ id, name });
+  }
+
+  function parseChatIdFromUrl(rawUrl) {
+    if (!rawUrl) return null;
+    try {
+      const url = new URL(rawUrl, window.location.origin);
+      const match = url.pathname.match(/\/(?:chat|c)\/([^/?#]+)/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function findSidebarContainer() {
+    const candidates = document.querySelectorAll("aside, nav, [role='navigation']");
+    for (const el of candidates) {
+      if (el.querySelector("a[href*='/chat/'], a[href*='/c/']")) return el;
+    }
+    return null;
+  }
+
+  function attachUIToSidebar() {
+    if (!ui.root) return false;
+    const sidebar = findSidebarContainer();
+    if (!sidebar) return false;
+    if (ui.root.parentElement !== sidebar) {
+      sidebar.appendChild(ui.root);
+    }
+    return true;
   }
 
   function ensureBaseUI() {
@@ -77,7 +108,7 @@
       <div class="dsco-list" data-role="list"></div>
     `;
 
-    document.body.appendChild(root);
+    attachUIToSidebar();
 
     ui.root = root;
     ui.list = root.querySelector("[data-role='list']");
@@ -112,11 +143,40 @@
     });
   }
 
+  function getChatTitlesFromSidebar() {
+    const map = {};
+    const sidebar = findSidebarContainer();
+    if (!sidebar) return map;
+
+    const links = sidebar.querySelectorAll("a[href]");
+    for (const link of links) {
+      const chatId = parseChatIdFromUrl(link.getAttribute("href"));
+      if (!chatId) continue;
+      const title = (link.textContent || link.getAttribute("title") || link.getAttribute("aria-label") || "").trim();
+      if (title) map[chatId] = title;
+    }
+    return map;
+  }
+
+  function buildChatsByProject() {
+    const grouped = {};
+    for (const [chatId, projectId] of Object.entries(state.chatToProject)) {
+      if (!projectId) continue;
+      if (!grouped[projectId]) grouped[projectId] = [];
+      grouped[projectId].push(chatId);
+    }
+    return grouped;
+  }
+
   function render() {
     if (!ui.root) return;
 
+    if (!ui.root.isConnected) attachUIToSidebar();
+
     const chatId = getCurrentChatId();
     const assigned = chatId ? state.chatToProject[chatId] : null;
+    const chatTitles = getChatTitlesFromSidebar();
+    const chatsByProject = buildChatsByProject();
 
     ui.select.innerHTML = "";
     const placeholder = document.createElement("option");
@@ -137,13 +197,28 @@
       ui.list.innerHTML = "<div class='dsco-empty'>No projects yet.</div>";
     } else {
       for (const p of state.projects) {
-        const count = Object.values(state.chatToProject).filter((id) => id === p.id).length;
+        const chatIds = chatsByProject[p.id] || [];
         const row = document.createElement("div");
-        row.className = "dsco-row";
+        row.className = "dsco-project";
         row.innerHTML = `
-          <div class="dsco-row-name">${escapeHtml(p.name)}</div>
-          <div class="dsco-row-count">${count}</div>
+          <div class="dsco-project-header">
+            <div class="dsco-project-name">${escapeHtml(p.name)}</div>
+            <div class="dsco-project-count">${chatIds.length}</div>
+          </div>
+          <div class="dsco-project-chats"></div>
         `;
+        const list = row.querySelector(".dsco-project-chats");
+        if (chatIds.length === 0) {
+          list.innerHTML = "<div class='dsco-chat-empty'>No chats assigned.</div>";
+        } else {
+          for (const id of chatIds) {
+            const label = chatTitles[id] || `Chat ${id.slice(0, 6)}`;
+            const item = document.createElement("div");
+            item.className = "dsco-chat-item";
+            item.textContent = label;
+            list.appendChild(item);
+          }
+        }
         ui.list.appendChild(row);
       }
     }
@@ -195,6 +270,7 @@
   }
 
   function onUrlChange() {
+    attachUIToSidebar();
     render();
   }
 
@@ -218,11 +294,20 @@
     window.addEventListener("dsco:urlchange", onUrlChange);
   }
 
+  function startSidebarObserver() {
+    if (sidebarObserver) return;
+    sidebarObserver = new MutationObserver(() => {
+      if (attachUIToSidebar()) render();
+    });
+    sidebarObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   async function init() {
     ensureBaseUI();
     await loadState();
     render();
     hookHistory();
+    startSidebarObserver();
   }
 
   init();
