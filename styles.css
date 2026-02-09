@@ -7,6 +7,10 @@
   border-radius: 12px;
   padding: 12px;
   margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  height: min(320px, calc(100vh - 220px));
+  overflow: hidden;
 }
 
 .dsco-header {
@@ -72,8 +76,9 @@
 }
 
 .dsco-list {
-  max-height: 320px;
-  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
   gap: 8px;
 }
@@ -103,11 +108,33 @@
   max-width: 180px;
 }
 
+.dsco-project-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .dsco-project-count {
   background: #1f2937;
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 11px;
+}
+
+.dsco-project-remove {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.dsco-project-remove:hover {
+  background: rgb(212, 72, 72);
+  color: #e2e8f0;
 }
 
 .dsco-empty {
@@ -128,10 +155,12 @@
   border: 1px solid #1e293b;
   border-radius: 8px;
   padding: 4px 6px 4px 8px;
+  overflow: hidden;
 }
 
 .dsco-chat-link {
   flex: 1;
+  min-width: 0;
   font-size: 12px;
   color: #cbd5f5;
   text-decoration: none;

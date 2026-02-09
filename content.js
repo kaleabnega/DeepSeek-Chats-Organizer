@@ -143,7 +143,7 @@
     root.innerHTML = `
       <div class="dsco-header">
         <div class="dsco-title">Projects</div>
-        <button class="dsco-btn dsco-btn-small" data-action="new">New</button>
+        <button class="dsco-btn dsco-btn-small" data-action="new">Create one</button>
       </div>
       <div class="dsco-controls">
         <select class="dsco-select" data-role="project-select"></select>
@@ -265,13 +265,33 @@
           const row = document.createElement("div");
           row.className = "dsco-project";
           row.innerHTML = `
-            <div class="dsco-project-header">
-              <div class="dsco-project-name">${escapeHtml(p.name)}</div>
+          <div class="dsco-project-header">
+            <div class="dsco-project-name">${escapeHtml(p.name)}</div>
+            <div class="dsco-project-actions">
               <div class="dsco-project-count">${chatIds.length}</div>
+              <button class="dsco-project-remove" type="button" data-project-id="${p.id}" aria-label="Delete project">×</button>
             </div>
-            <div class="dsco-project-chats"></div>
-          `;
+          </div>
+          <div class="dsco-project-chats"></div>
+        `;
           const list = row.querySelector(".dsco-project-chats");
+          const removeBtn = row.querySelector(".dsco-project-remove");
+          if (removeBtn) {
+            removeBtn.addEventListener("click", async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              state.projects = state.projects.filter(
+                (proj) => proj.id !== p.id,
+              );
+              for (const [chatId, projectId] of Object.entries(
+                state.chatToProject,
+              )) {
+                if (projectId === p.id) delete state.chatToProject[chatId];
+              }
+              await saveState();
+              render();
+            });
+          }
           if (chatIds.length === 0) {
             list.innerHTML =
               "<div class='dsco-chat-empty'>No chats assigned.</div>";
