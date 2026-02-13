@@ -222,6 +222,48 @@
     return grouped;
   }
 
+  function openChatById(chatId) {
+    const selector = `a[href='/a/chat/s/${chatId}'], a[href='/chat/${chatId}'], a[href='/c/${chatId}']`;
+    const candidates = Array.from(document.querySelectorAll(selector));
+    const target =
+      candidates.find((el) => sidebarRoot && sidebarRoot.contains(el)) ||
+      candidates[0];
+    if (!target) return false;
+
+    const events = [
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        pointerType: "mouse",
+        button: 0,
+      }),
+      new MouseEvent("mousedown", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        button: 0,
+      }),
+      new MouseEvent("mouseup", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        button: 0,
+      }),
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        button: 0,
+      }),
+    ];
+
+    for (const ev of events) {
+      target.dispatchEvent(ev);
+    }
+    return true;
+  }
+
   function render() {
     if (!ui.root) return;
 
@@ -323,8 +365,14 @@
               link.className = "dsco-chat-link";
               link.href = `/a/chat/s/${id}`;
               link.textContent = label;
-              link.addEventListener("click", () => {
-                window.dispatchEvent(new Event("dsco:urlchange"));
+              link.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const opened = openChatById(id);
+                if (!opened) {
+                  history.pushState({}, "", `/a/chat/s/${id}`);
+                  window.dispatchEvent(new Event("dsco:urlchange"));
+                }
               });
 
               const del = document.createElement("button");
@@ -493,6 +541,11 @@
       if (ui.root && ui.root.isConnected) ui.root.remove();
       return;
     }
+    lastStatusText = null;
+    lastAssignDisabled = null;
+    lastUnassignDisabled = null;
+    lastSelectKey = null;
+    lastListKey = null;
     ensureBaseUI();
     render();
     hookHistory();
