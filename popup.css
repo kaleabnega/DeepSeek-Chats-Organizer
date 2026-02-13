@@ -1,0 +1,46 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  width: 260px;
+}
+
+.popup-root {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.popup-header {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.popup-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.popup-btn {
+  background: #2563eb;
+  border: none;
+  color: #ffffff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.popup-btn:hover {
+  background: #1d4ed8;
+}
+
+.popup-hint {
+  font-size: 11px;
+  color: #94a3b8;
+}

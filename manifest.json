@@ -5,6 +5,10 @@
   "description": "Group DeepSeek chats into local projects.",
   "permissions": ["storage"],
   "host_permissions": ["https://chat.deepseek.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DeepSeek Chats Organizer"
+  },
   "content_scripts": [
     {
       "matches": ["https://chat.deepseek.com/*"],

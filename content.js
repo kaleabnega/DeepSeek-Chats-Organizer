@@ -268,7 +268,8 @@
           <div class="dsco-project-header">
             <div class="dsco-project-name">${escapeHtml(p.name)}</div>
             <div class="dsco-project-actions">
-              <div class="dsco-project-count">${chatIds.length}</div>
+            
+              <button class="dsco-project-rename" type="button" data-project-id="${p.id}" aria-label="Rename project">Rename</button>
               <button class="dsco-project-remove" type="button" data-project-id="${p.id}" aria-label="Delete project">×</button>
             </div>
           </div>
@@ -276,6 +277,7 @@
         `;
           const list = row.querySelector(".dsco-project-chats");
           const removeBtn = row.querySelector(".dsco-project-remove");
+          const renameBtn = row.querySelector(".dsco-project-rename");
           if (removeBtn) {
             removeBtn.addEventListener("click", async (e) => {
               e.preventDefault();
@@ -288,6 +290,19 @@
               )) {
                 if (projectId === p.id) delete state.chatToProject[chatId];
               }
+              await saveState();
+              render();
+            });
+          }
+          if (renameBtn) {
+            renameBtn.addEventListener("click", async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const nextName = window.prompt("Rename project to:", p.name);
+              if (!nextName) return;
+              const trimmed = nextName.trim();
+              if (!trimmed) return;
+              p.name = trimmed;
               await saveState();
               render();
             });
