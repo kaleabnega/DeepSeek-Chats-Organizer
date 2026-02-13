@@ -43,8 +43,8 @@
 
   function loadState() {
     return new Promise((resolve) => {
-      chrome.storage.local.get([STORAGE_KEY, ENABLE_KEY], (result) => {
-        const saved = result[STORAGE_KEY];
+      chrome.storage.sync.get([STORAGE_KEY, ENABLE_KEY], (syncResult) => {
+        const saved = syncResult[STORAGE_KEY];
         if (saved && typeof saved === "object") {
           state.projects = Array.isArray(saved.projects) ? saved.projects : [];
           state.chatToProject =
@@ -52,7 +52,7 @@
               ? saved.chatToProject
               : {};
         }
-        state.enabled = Boolean(result[ENABLE_KEY]);
+        state.enabled = Boolean(syncResult[ENABLE_KEY]);
         resolve();
       });
     });
@@ -60,7 +60,7 @@
 
   function saveState() {
     return new Promise((resolve) => {
-      chrome.storage.local.set(
+      chrome.storage.sync.set(
         {
           [STORAGE_KEY]: {
             projects: state.projects,
@@ -559,9 +559,20 @@
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== "local") return;
+    if (area !== "sync") return;
     if (Object.prototype.hasOwnProperty.call(changes, ENABLE_KEY)) {
       setEnabled(Boolean(changes[ENABLE_KEY].newValue));
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, STORAGE_KEY)) {
+      const saved = changes[STORAGE_KEY].newValue;
+      if (saved && typeof saved === "object") {
+        state.projects = Array.isArray(saved.projects) ? saved.projects : [];
+        state.chatToProject =
+          saved.chatToProject && typeof saved.chatToProject === "object"
+            ? saved.chatToProject
+            : {};
+        render();
+      }
     }
   });
 

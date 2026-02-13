@@ -1,7 +1,7 @@
 const ENABLE_KEY = "dsco_enabled_v1";
 
 function disableByDefault() {
-  chrome.storage.local.set({ [ENABLE_KEY]: false });
+  chrome.storage.sync.set({ [ENABLE_KEY]: false });
 }
 
 chrome.runtime.onInstalled.addListener(() => {
