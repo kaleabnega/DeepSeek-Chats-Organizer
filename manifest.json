@@ -3,11 +3,14 @@
   "name": "DeepSeek Chats Organizer",
   "version": "0.1.0",
   "description": "Group DeepSeek chats into local projects.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
   "host_permissions": ["https://chat.deepseek.com/*"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "DeepSeek Chats Organizer"
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {

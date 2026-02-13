@@ -1,9 +1,11 @@
 (() => {
   const STORAGE_KEY = "dsco_state_v1";
+  const ENABLE_KEY = "dsco_enabled_v1";
 
   const state = {
     projects: [],
     chatToProject: {},
+    enabled: false,
   };
 
   const ui = {
@@ -41,7 +43,7 @@
 
   function loadState() {
     return new Promise((resolve) => {
-      chrome.storage.local.get([STORAGE_KEY], (result) => {
+      chrome.storage.local.get([STORAGE_KEY, ENABLE_KEY], (result) => {
         const saved = result[STORAGE_KEY];
         if (saved && typeof saved === "object") {
           state.projects = Array.isArray(saved.projects) ? saved.projects : [];
@@ -50,6 +52,7 @@
               ? saved.chatToProject
               : {};
         }
+        state.enabled = Boolean(result[ENABLE_KEY]);
         resolve();
       });
     });
@@ -484,14 +487,36 @@
     }
   }
 
-  async function init() {
+  function setEnabled(next) {
+    state.enabled = next;
+    if (!next) {
+      if (ui.root && ui.root.isConnected) ui.root.remove();
+      return;
+    }
     ensureBaseUI();
-    await loadState();
     render();
     hookHistory();
     startSidebarObserver();
     startUrlWatcher();
   }
+
+  async function init() {
+    await loadState();
+    setEnabled(state.enabled);
+  }
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") return;
+    if (Object.prototype.hasOwnProperty.call(changes, ENABLE_KEY)) {
+      setEnabled(Boolean(changes[ENABLE_KEY].newValue));
+    }
+  });
+
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message && message.type === "dsco:enable") {
+      setEnabled(true);
+    }
+  });
 
   init();
 })();
