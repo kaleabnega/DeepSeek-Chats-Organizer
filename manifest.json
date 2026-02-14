@@ -3,6 +3,12 @@
   "name": "DeepSeek Chats Organizer",
   "version": "0.1.0",
   "description": "Group DeepSeek chats into local projects.",
+  "icons": {
+    "16": "icons/extension-logo-16.png",
+    "32": "icons/extension-logo-32.png",
+    "48": "icons/extension-logo-48.png",
+    "128": "icons/extension-logo-128.png"
+  },
   "permissions": ["storage", "tabs"],
   "host_permissions": ["https://chat.deepseek.com/*"],
   "action": {
