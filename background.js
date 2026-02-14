@@ -7,7 +7,3 @@ function disableByDefault() {
 chrome.runtime.onInstalled.addListener(() => {
   disableByDefault();
 });
-
-chrome.runtime.onStartup.addListener(() => {
-  disableByDefault();
-});
