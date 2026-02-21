@@ -4,6 +4,11 @@ DeepSeek Chats Organizer is a Chrome extension that adds a **Projects** panel in
 
 > Note: This extension is not affiliated with or endorsed by DeepSeek.
 
+## Installation (Chrome Web Store)
+
+Install directly from the Chrome Web Store:
+`https://chromewebstore.google.com/detail/deepseek-chats-organizer/obljedcalmcodephlpcolbkogmalbjno`
+
 ## Features
 
 - Create, rename, and delete projects
@@ -57,5 +62,4 @@ DeepSeek-Chats-Organizer/
 
 - If the panel doesn’t appear, open the popup and click **Launch** again.
 - If chat navigation doesn’t work, reload the tab after updating the extension.
-
 
